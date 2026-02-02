@@ -35,6 +35,7 @@ export default function Canvas() {
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
       onConnect={onConnect}
+      colorMode="dark"
     >
       <Controls />
       <MiniMap />

@@ -5,7 +5,7 @@ import PropertiesPanel from '@/components/PropertiesPanel';
 
 function App() {
   return (
-    <div className="flex flex-col w-screen h-screen bg-gray-900 text-white">
+    <div className="flex flex-col w-screen h-screen bg-background text-foreground">
       {/* Toolbar at top */}
       <Toolbar />
 
