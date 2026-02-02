@@ -1,18 +1,15 @@
-import { useCallback } from 'react';
+import { useEffect } from 'react';
 import {
   ReactFlow,
   MiniMap,
   Controls,
   Background,
-  useNodesState,
-  useEdgesState,
-  addEdge,
-  Connection,
   BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { nodeTypes } from '@/nodes/registry';
 import { NodeType, SprijtNode, SprijtEdge } from '@/nodes/types';
+import { useFlowStore } from '@/store/flowStore';
 
 const initialNodes: SprijtNode[] = [
   {
@@ -53,13 +50,12 @@ const initialEdges: SprijtEdge[] = [
 ];
 
 export default function Canvas() {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const { nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChange, onConnect } = useFlowStore();
 
-  const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
-  );
+  useEffect(() => {
+    setNodes(initialNodes);
+    setEdges(initialEdges);
+  }, [setNodes, setEdges]);
 
   return (
     <ReactFlow
