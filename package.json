@@ -11,7 +11,9 @@
     "build:renderer": "tsc -p tsconfig.json && vite build",
     "build:main": "tsc -p tsconfig.main.json",
     "start": "electron .",
-    "lint": "eslint src --ext .ts,.tsx"
+    "lint": "eslint src --ext .ts,.tsx",
+    "package": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder"
   },
   "dependencies": {
     "@xyflow/react": "^12.4.4",
@@ -31,9 +33,35 @@
     "concurrently": "^9.1.2",
     "cross-env": "^7.0.3",
     "electron": "^34.0.2",
+    "electron-builder": "^24.13.3",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.7.3",
     "vite": "^6.0.7"
+  },
+  "build": {
+    "appId": "com.sprijt.app",
+    "productName": "Sprijt",
+    "files": [
+      "dist/**/*",
+      "assets/**/*"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "mac": {
+      "category": "public.app-category.graphics-design",
+      "target": ["dmg", "zip"],
+      "icon": "assets/icon.png"
+    },
+    "win": {
+      "target": ["nsis", "portable"],
+      "icon": "assets/icon.png"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Graphics",
+      "icon": "assets/icon.png"
+    }
   }
 }

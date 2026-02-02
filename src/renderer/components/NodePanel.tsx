@@ -1,8 +1,15 @@
-import { X } from 'lucide-react';
+import { X, ImageIcon, Eye, Palette, Save } from 'lucide-react';
 
 interface NodePanelProps {
   onClose: () => void;
 }
+
+const nodeTypes = [
+  { id: 'loadImage', label: 'Load Image', icon: ImageIcon },
+  { id: 'colorReplace', label: 'Color Replace', icon: Palette },
+  { id: 'previewImage', label: 'Preview', icon: Eye },
+  { id: 'saveImage', label: 'Save Image', icon: Save },
+];
 
 export default function NodePanel({ onClose }: NodePanelProps) {
   return (
@@ -23,14 +30,19 @@ export default function NodePanel({ onClose }: NodePanelProps) {
         {/* Node list */}
         <div className="p-3 max-h-[600px] overflow-y-auto">
           <div className="space-y-2">
-            {['Input', 'Blur', 'Brightness', 'Contrast', 'Saturation', 'Output'].map((node) => (
-              <div
-                key={node}
-                className="p-3 bg-secondary/50 rounded-md cursor-pointer hover:bg-accent transition-colors"
-              >
-                <span className="text-sm">{node}</span>
-              </div>
-            ))}
+            {nodeTypes.map((node) => {
+              const Icon = node.icon;
+              return (
+                <div
+                  key={node.id}
+                  className="p-3 bg-secondary/50 rounded-md cursor-pointer hover:bg-accent transition-colors flex items-center gap-2"
+                  draggable
+                >
+                  <Icon size={16} className="text-muted-foreground" />
+                  <span className="text-sm">{node.label}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
