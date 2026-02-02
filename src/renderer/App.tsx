@@ -1,27 +1,29 @@
+import { useState } from 'react';
 import Toolbar from '@/components/Toolbar';
 import NodePanel from '@/components/NodePanel';
 import Canvas from '@/components/Canvas';
 import PropertiesPanel from '@/components/PropertiesPanel';
 
 function App() {
+  const [showNodePanel, setShowNodePanel] = useState(true);
+  const [showProperties, setShowProperties] = useState(false);
+
   return (
-    <div className="flex flex-col w-screen h-screen bg-background text-foreground">
-      {/* Toolbar at top */}
-      <Toolbar />
+    <div className="relative w-screen h-screen bg-background text-foreground">
+      {/* Full-screen canvas */}
+      <Canvas />
 
-      {/* Main content area */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left sidebar - Node library */}
-        <NodePanel />
+      {/* Floating toolbar at top */}
+      <Toolbar
+        onToggleNodes={() => setShowNodePanel(!showNodePanel)}
+        showNodePanel={showNodePanel}
+      />
 
-        {/* Center - Canvas */}
-        <div className="flex-1 relative">
-          <Canvas />
-        </div>
-      </div>
+      {/* Floating node panel on left */}
+      {showNodePanel && <NodePanel onClose={() => setShowNodePanel(false)} />}
 
-      {/* Bottom - Properties panel */}
-      <PropertiesPanel />
+      {/* Floating properties panel at bottom */}
+      {showProperties && <PropertiesPanel onClose={() => setShowProperties(false)} />}
     </div>
   );
 }

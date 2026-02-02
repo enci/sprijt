@@ -31,5 +31,12 @@
       }
     }
   ],
-  "compounds": []
+  "compounds": [
+    {
+      "name": "Debug Full Stack",
+      "configurations": ["Debug Electron Main"],
+      "preLaunchTask": "Start Dev Server",
+      "stopAll": true
+    }
+  ]
 }

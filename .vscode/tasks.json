@@ -1,0 +1,31 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "npm",
+      "script": "build:main",
+      "problemMatcher": ["$tsc"],
+      "label": "npm: build:main",
+      "detail": "tsc -p tsconfig.main.json"
+    },
+    {
+      "type": "npm",
+      "script": "dev",
+      "problemMatcher": [],
+      "label": "npm: dev",
+      "detail": "concurrently \"npm run dev:renderer\" \"npm run dev:main\""
+    },
+    {
+      "type": "npm",
+      "script": "dev:renderer",
+      "problemMatcher": [],
+      "label": "Start Dev Server",
+      "detail": "vite",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    }
+  ]
+}

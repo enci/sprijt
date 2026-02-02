@@ -1,35 +1,49 @@
-import { Menu, Play, Undo2, Redo2 } from 'lucide-react';
+import { Layers, Play, Undo2, Redo2, Menu } from 'lucide-react';
 
-export default function Toolbar() {
+interface ToolbarProps {
+  onToggleNodes: () => void;
+  showNodePanel: boolean;
+}
+
+export default function Toolbar({ onToggleNodes, showNodePanel }: ToolbarProps) {
   return (
-    <div className="h-14 bg-card border-b border-border flex items-center px-4 gap-2">
-      {/* Menu button */}
-      <button className="p-2 hover:bg-accent rounded">
-        <Menu size={20} />
-      </button>
+    <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50">
+      <div className="bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg flex items-center gap-1 px-4 py-3">
+        {/* Menu button */}
+        <button className="p-2.5 hover:bg-accent rounded-md transition-colors" title="Menu">
+          <Menu size={20} />
+        </button>
 
-      <div className="w-px h-6 bg-border" />
+        <div className="w-px h-6 bg-border mx-2" />
 
-      {/* Play button */}
-      <button className="p-2 hover:bg-accent rounded text-green-500">
-        <Play size={20} />
-      </button>
+        {/* Toggle nodes panel */}
+        <button
+          className={`p-2.5 rounded-md transition-colors ${
+            showNodePanel ? 'bg-accent' : 'hover:bg-accent'
+          }`}
+          onClick={onToggleNodes}
+          title="Toggle Nodes"
+        >
+          <Layers size={20} />
+        </button>
 
-      <div className="w-px h-6 bg-border" />
+        <div className="w-px h-6 bg-border mx-2" />
 
-      {/* Undo/Redo */}
-      <button className="p-2 hover:bg-accent rounded">
-        <Undo2 size={20} />
-      </button>
-      <button className="p-2 hover:bg-accent rounded">
-        <Redo2 size={20} />
-      </button>
+        {/* Play button */}
+        <button className="p-2.5 hover:bg-accent rounded-md text-green-500 transition-colors" title="Run">
+          <Play size={20} />
+        </button>
 
-      {/* Spacer */}
-      <div className="flex-1" />
+        <div className="w-px h-6 bg-border mx-2" />
 
-      {/* App title */}
-      <span className="text-sm font-semibold text-muted-foreground">Sprijt</span>
+        {/* Undo/Redo */}
+        <button className="p-2.5 hover:bg-accent rounded-md transition-colors" title="Undo">
+          <Undo2 size={20} />
+        </button>
+        <button className="p-2.5 hover:bg-accent rounded-md transition-colors" title="Redo">
+          <Redo2 size={20} />
+        </button>
+      </div>
     </div>
   );
 }
