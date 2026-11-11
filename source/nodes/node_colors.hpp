@@ -8,8 +8,7 @@ namespace editor {
 enum Color_ {
     // Pin type colors (determines wire color in Blender fashion)
     Color_PinImage,         // teal  — image data
-    Color_PinColor,         // green — color/float value
-    Color_PinMask,          // purple — mask/alpha channel
+    Color_PinJSON,          // green — json data
 
     // Node header colors (by node category)
     Color_HeaderInput,      // green
@@ -29,8 +28,7 @@ enum Color_ {
 inline const char* GetColorName(Color_ idx) {
     switch (idx) {
         case Color_PinImage:             return "Pin: Image";
-        case Color_PinColor:             return "Pin: Color";
-        case Color_PinMask:              return "Pin: Mask";
+        case Color_PinJSON:              return "Pin: JSON";
         case Color_HeaderInput:          return "Header: Input";
         case Color_HeaderProcess:        return "Header: Process";
         case Color_HeaderOutput:         return "Header: Output";

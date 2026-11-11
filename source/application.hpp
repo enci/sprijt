@@ -2,20 +2,11 @@
 
 #include <SDL3/SDL.h>
 #include <string>
-#include <vector>
-#include <unordered_map>
 
 #include <imgui.h>
 #include <imgui_node_editor.h>
 #include "nodes/node_colors.hpp"
-
-struct LinkInfo
-{
-    ax::NodeEditor::LinkId Id;
-    ax::NodeEditor::PinId InputId;
-    ax::NodeEditor::PinId OutputId;
-    ImVec4 Color;
-};
+#include "nodes/node_graph.hpp"
 
 class application {
 public:
@@ -38,12 +29,18 @@ private:
     void render();
     void cleanup();
     void node_editor();
+    void side_panel();
     void toolbar();
+    void context_menu();
 
     void set_light_theme();
     void set_dark_theme();
     void set_node_editor_style();
     void apply_theme();
+
+    // Helpers
+    ImVec4 wire_color(pin_data_type type) const;
+    ImVec4 header_color(node_category cat) const;
 
     SDL_Window* m_window;
     SDL_Renderer* m_renderer;
@@ -66,7 +63,6 @@ private:
 
     ax::NodeEditor::EditorContext* m_node_editor_context;
     bool m_first_frame = true;
-    std::vector<LinkInfo> m_links;
-    int m_next_link_id = 100;
-    std::unordered_map<uintptr_t, ImVec4> m_pin_colors;
+    node_graph m_graph;
+    int m_selected_node_id = 0;
 };

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(sprijt VERSION 0.1.0 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Include FetchContent for dependencies
@@ -42,7 +42,24 @@ set(FT_DISABLE_BZIP2 ON CACHE BOOL "" FORCE)
 set(FT_DISABLE_PNG ON CACHE BOOL "" FORCE)
 set(FT_DISABLE_HARFBUZZ ON CACHE BOOL "" FORCE)
 set(FT_DISABLE_BROTLI ON CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(freetype)
+
+# Fetch stb (header-only image loading/writing)
+FetchContent_Declare(
+        stb
+        GIT_REPOSITORY https://github.com/nothings/stb.git
+        GIT_TAG master
+)
+FetchContent_MakeAvailable(stb)
+
+# Fetch nlohmann/json (header-only)
+FetchContent_Declare(
+        nlohmann_json
+        GIT_REPOSITORY https://github.com/nlohmann/json.git
+        GIT_TAG v3.11.3
+)
+FetchContent_MakeAvailable(nlohmann_json)
 
 # ---- ImGui sources ----
 set(IMGUI_DIR ${imgui_SOURCE_DIR})
@@ -84,11 +101,27 @@ set(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/source)
 set(SPRIJT_SOURCES
         ${SOURCE_DIR}/main.cpp
         ${SOURCE_DIR}/application.cpp
+        ${SOURCE_DIR}/stb_impl.cpp
+        ${SOURCE_DIR}/nodes/node_graph.cpp
+        ${SOURCE_DIR}/nodes/load_image_node.cpp
+        ${SOURCE_DIR}/nodes/save_image_node.cpp
+        ${SOURCE_DIR}/nodes/load_json_node.cpp
+        ${SOURCE_DIR}/nodes/save_json_node.cpp
 )
 
 set(SPRIJT_HEADERS
         ${SOURCE_DIR}/application.hpp
+        ${SOURCE_DIR}/fluent_glyph.hpp
         ${SOURCE_DIR}/nodes/node_colors.hpp
+        ${SOURCE_DIR}/nodes/pin_types.hpp
+        ${SOURCE_DIR}/nodes/node_base.hpp
+        ${SOURCE_DIR}/nodes/node_macros.hpp
+        ${SOURCE_DIR}/nodes/node_registry.hpp
+        ${SOURCE_DIR}/nodes/node_graph.hpp
+        ${SOURCE_DIR}/nodes/load_image_node.hpp
+        ${SOURCE_DIR}/nodes/save_image_node.hpp
+        ${SOURCE_DIR}/nodes/load_json_node.hpp
+        ${SOURCE_DIR}/nodes/save_json_node.hpp
 )
 
 add_executable(sprijt
@@ -106,6 +139,7 @@ target_include_directories(sprijt PRIVATE
         ${IMGUI_DIR}/misc/freetype
         ${IMGUI_NODE_EDITOR_DIR}
         ${freetype_SOURCE_DIR}/include
+        ${stb_SOURCE_DIR}
 )
 
 target_compile_definitions(sprijt PRIVATE
@@ -115,4 +149,5 @@ target_compile_definitions(sprijt PRIVATE
 target_link_libraries(sprijt PRIVATE
         SDL3::SDL3-static
         freetype
+        nlohmann_json::nlohmann_json
 )

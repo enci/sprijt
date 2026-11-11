@@ -1,5 +1,6 @@
 #include "application.hpp"
 #include "fluent_glyph.hpp"
+#include "nodes/node_registry.hpp"
 #include <imgui_node_editor_node_builder.h>
 #include <imgui_node_editor_pin_icons.h>
 #include <stdexcept>
@@ -180,8 +181,12 @@ void application::update() {
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 
+    // Side panel width
+    const float panel_width = m_selected_node_id ? 300.0f * m_ui_scale : 0.0f;
+    const float editor_width = m_width - panel_width;
+
     // Fullscreen node editor window
-    ImGui::SetNextWindowSize(ImVec2(m_width, m_height), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(editor_width, m_height), ImGuiCond_Always);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
@@ -197,6 +202,10 @@ void application::update() {
 
     ImGui::End();
     ImGui::PopStyleVar(2);
+
+    // Side panel for selected node properties
+    if (m_selected_node_id)
+        side_panel();
 
     // Floating toolbar overlay
     toolbar();
@@ -238,168 +247,215 @@ void application::node_editor() {
 
     ed::Begin("My Editor", ImVec2(0.0, 0.0f));
 
-    int uniqueId = 1;
     ed::NodeBuilder builder;
     const ImVec2 iconSize(16, 16);
 
-    // --- Node A: Image input node (green header) ---
-    ed::NodeId nodeA_Id = uniqueId++;
-    ed::PinId  nodeA_InputPinId = uniqueId++;
-    ed::PinId  nodeA_OutputPinId = uniqueId++;
+    // --- Render all nodes generically from the graph ---
+    for (const auto& node : m_graph.nodes()) {
+        ed::NodeId nodeId(node->id());
+        auto inputs  = node->inputs();
+        auto outputs = node->outputs();
 
-    m_pin_colors[nodeA_InputPinId.Get()]  = m_colors[editor::Color_PinColor];
-    m_pin_colors[nodeA_OutputPinId.Get()] = m_colors[editor::Color_PinImage];
-
-    if (m_first_frame)
-        ed::SetNodePosition(nodeA_Id, ImVec2(10, 10));
-
-    builder.Begin(nodeA_Id);
-    {
-        builder.Header(m_colors[editor::Color_HeaderInput]);
-            ImGui::TextUnformatted("Image Input");
-            ImGui::Dummy(ImVec2(80, 0));
-        builder.EndHeader();
-
-        builder.BeginColumns();
+        builder.Begin(nodeId);
         {
-            // Inputs column
-            ImGui::BeginGroup();
-            {
-                ed::BeginPin(nodeA_InputPinId, ed::PinKind::Input);
-                    ed::DrawPinIcon(iconSize, ed::PinIconType::Circle, true, m_colors[editor::Color_PinColor]);
-                    ImGui::SameLine();
-                    ImGui::TextUnformatted("Color");
-                ed::EndPin();
-            }
-            ImGui::EndGroup();
+            // Header (colored by category)
+            builder.Header(header_color(node->category()));
+                ImGui::TextUnformatted(std::string(node->display_name()).c_str());
+                ImGui::Dummy(ImVec2(80, 0));
+            builder.EndHeader();
 
-            ImGui::SameLine(0, 20);
-
-            // Outputs column
-            ImGui::BeginGroup();
+            builder.BeginColumns();
             {
-                ed::BeginPin(nodeA_OutputPinId, ed::PinKind::Output);
-                    ImGui::TextUnformatted("Image");
-                    ImGui::SameLine();
-                    ed::DrawPinIcon(iconSize, ed::PinIconType::Circle, true, m_colors[editor::Color_PinImage]);
-                ed::EndPin();
+                // Input pins column
+                ImGui::BeginGroup();
+                for (int i = 0; i < static_cast<int>(inputs.size()); ++i) {
+                    int pin_id = encode_pin_id(node->id(), i, false);
+                    ImVec4 color = wire_color(inputs[i].data_type);
+
+                    ed::BeginPin(ed::PinId(pin_id), ed::PinKind::Input);
+                        ed::DrawPinIcon(iconSize, ed::PinIconType::Circle, true, color);
+                        ImGui::SameLine();
+                        ImGui::TextUnformatted(std::string(inputs[i].name).c_str());
+                    ed::EndPin();
+                }
+                if (inputs.empty())
+                    ImGui::Dummy(ImVec2(1, 0));
+                ImGui::EndGroup();
+
+                ImGui::SameLine(0, 20);
+
+                // Output pins column
+                ImGui::BeginGroup();
+                for (int i = 0; i < static_cast<int>(outputs.size()); ++i) {
+                    int pin_id = encode_pin_id(node->id(), i, true);
+                    ImVec4 color = wire_color(outputs[i].data_type);
+
+                    ed::BeginPin(ed::PinId(pin_id), ed::PinKind::Output);
+                        ImGui::TextUnformatted(std::string(outputs[i].name).c_str());
+                        ImGui::SameLine();
+                        ed::DrawPinIcon(iconSize, ed::PinIconType::Circle, true, color);
+                    ed::EndPin();
+                }
+                if (outputs.empty())
+                    ImGui::Dummy(ImVec2(1, 0));
+                ImGui::EndGroup();
             }
-            ImGui::EndGroup();
+            builder.EndColumns();
         }
-        builder.EndColumns();
+        builder.End();
     }
-    builder.End();
 
-    // --- Node B: Filter node (orange header) ---
-    ed::NodeId nodeB_Id = uniqueId++;
-    ed::PinId  nodeB_InputPinId1 = uniqueId++;
-    ed::PinId  nodeB_InputPinId2 = uniqueId++;
-    ed::PinId  nodeB_OutputPinId = uniqueId++;
+    // --- Submit links (colored by source pin data type) ---
+    for (const auto& link : m_graph.links()) {
+        int src_pin_id = encode_pin_id(link.src_node, link.src_pin, true);
+        int dst_pin_id = encode_pin_id(link.dst_node, link.dst_pin, false);
 
-    m_pin_colors[nodeB_InputPinId1.Get()] = m_colors[editor::Color_PinImage];
-    m_pin_colors[nodeB_InputPinId2.Get()] = m_colors[editor::Color_PinColor];
-    m_pin_colors[nodeB_OutputPinId.Get()] = m_colors[editor::Color_PinMask];
-
-    if (m_first_frame)
-        ed::SetNodePosition(nodeB_Id, ImVec2(310, 60));
-
-    builder.Begin(nodeB_Id);
-    {
-        builder.Header(m_colors[editor::Color_HeaderProcess]);
-            ImGui::TextUnformatted("Filter");
-            ImGui::Dummy(ImVec2(100, 0));
-        builder.EndHeader();
-
-        builder.BeginColumns();
-        {
-            // Inputs column
-            ImGui::BeginGroup();
-            {
-                ed::BeginPin(nodeB_InputPinId1, ed::PinKind::Input);
-                    ed::DrawPinIcon(iconSize, ed::PinIconType::Circle, true, m_colors[editor::Color_PinImage]);
-                    ImGui::SameLine();
-                    ImGui::TextUnformatted("Source");
-                ed::EndPin();
-
-                ed::BeginPin(nodeB_InputPinId2, ed::PinKind::Input);
-                    ed::DrawPinIcon(iconSize, ed::PinIconType::Circle, true, m_colors[editor::Color_PinColor]);
-                    ImGui::SameLine();
-                    ImGui::TextUnformatted("Radius");
-                ed::EndPin();
-            }
-            ImGui::EndGroup();
-
-            ImGui::SameLine(0, 20);
-
-            // Outputs column
-            ImGui::BeginGroup();
-            {
-                ed::BeginPin(nodeB_OutputPinId, ed::PinKind::Output);
-                    ImGui::TextUnformatted("Result");
-                    ImGui::SameLine();
-                    ed::DrawPinIcon(iconSize, ed::PinIconType::Square, true, m_colors[editor::Color_PinMask]);
-                ed::EndPin();
-            }
-            ImGui::EndGroup();
+        // Determine wire color from the source pin's data type
+        ImVec4 color(1, 1, 1, 1);
+        if (auto* src = m_graph.find_node(link.src_node)) {
+            if (link.src_pin < static_cast<int>(src->outputs().size()))
+                color = wire_color(src->outputs()[link.src_pin].data_type);
         }
-        builder.EndColumns();
+
+        ed::Link(ed::LinkId(link.id), ed::PinId(dst_pin_id), ed::PinId(src_pin_id), color, 2.0f);
     }
-    builder.End();
 
-    // Submit Links (colored by output pin)
-    for (auto& linkInfo : m_links)
-        ed::Link(linkInfo.Id, linkInfo.InputId, linkInfo.OutputId, linkInfo.Color, 2.0f);
-
-    // Handle creation
-    if (ed::BeginCreate())
-    {
+    // --- Handle link creation ---
+    if (ed::BeginCreate()) {
         ed::PinId inputPinId, outputPinId;
-        if (ed::QueryNewLink(&inputPinId, &outputPinId))
-        {
-            if (inputPinId && outputPinId)
-            {
-                if (ed::AcceptNewItem())
-                {
-                    // Use output pin color for the link (like Blender)
-                    ImVec4 linkColor(1, 1, 1, 1);
-                    auto it = m_pin_colors.find(outputPinId.Get());
-                    if (it != m_pin_colors.end())
-                        linkColor = it->second;
+        if (ed::QueryNewLink(&inputPinId, &outputPinId)) {
+            if (inputPinId && outputPinId) {
+                int src_id = static_cast<int>(outputPinId.Get());
+                int dst_id = static_cast<int>(inputPinId.Get());
 
-                    m_links.push_back({ ed::LinkId(m_next_link_id++), inputPinId, outputPinId, linkColor });
-                    ed::Link(m_links.back().Id, m_links.back().InputId, m_links.back().OutputId, linkColor, 2.0f);
+                if (m_graph.can_link(src_id, dst_id)) {
+                    if (ed::AcceptNewItem()) {
+                        m_graph.add_link(src_id, dst_id);
+                    }
+                } else {
+                    ed::RejectNewItem(ImColor(255, 0, 0), 2.0f);
                 }
             }
         }
     }
     ed::EndCreate();
 
-    // Handle deletion
-    if (ed::BeginDelete())
-    {
+    // --- Handle deletion ---
+    if (ed::BeginDelete()) {
         ed::LinkId deletedLinkId;
-        while (ed::QueryDeletedLink(&deletedLinkId))
-        {
-            if (ed::AcceptDeletedItem())
-            {
-                for (auto it = m_links.begin(); it != m_links.end(); ++it)
-                {
-                    if (it->Id == deletedLinkId)
-                    {
-                        m_links.erase(it);
-                        break;
-                    }
-                }
+        while (ed::QueryDeletedLink(&deletedLinkId)) {
+            if (ed::AcceptDeletedItem()) {
+                m_graph.remove_link(static_cast<int>(deletedLinkId.Get()));
+            }
+        }
+
+        ed::NodeId deletedNodeId;
+        while (ed::QueryDeletedNode(&deletedNodeId)) {
+            if (ed::AcceptDeletedItem()) {
+                int nid = static_cast<int>(deletedNodeId.Get());
+                if (m_selected_node_id == nid)
+                    m_selected_node_id = 0;
+                m_graph.remove_node(nid);
             }
         }
     }
     ed::EndDelete();
+
+    // --- Track selection ---
+    if (ed::HasSelectionChanged()) {
+        ed::NodeId selectedNodes[1];
+        int count = ed::GetSelectedNodes(selectedNodes, 1);
+        if (count > 0) {
+            int nid = static_cast<int>(selectedNodes[0].Get());
+            m_selected_node_id = nid;
+            // Evaluate the selected node (pull-based)
+            m_graph.evaluate(nid);
+        } else {
+            m_selected_node_id = 0;
+        }
+    }
+
+    // --- Right-click context menu ---
+    context_menu();
 
     ed::End();
 
     ed::SetCurrentEditor(nullptr);
 
     m_first_frame = false;
+}
+
+void application::side_panel() {
+    const float panel_width = 300.0f * m_ui_scale;
+    const float panel_x = m_width - panel_width;
+
+    ImGui::SetNextWindowPos(ImVec2(panel_x, 0), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(panel_width, static_cast<float>(m_height)), ImGuiCond_Always);
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
+    ImGui::Begin("##properties", nullptr,
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoCollapse);
+
+    if (auto* node = m_graph.find_node(m_selected_node_id)) {
+        // Header with node name and category
+        ImVec4 hdr = header_color(node->category());
+        ImGui::PushStyleColor(ImGuiCol_Text, hdr);
+        ImGui::TextUnformatted(std::string(node->display_name()).c_str());
+        ImGui::PopStyleColor();
+        ImGui::Separator();
+
+        // Node-specific properties
+        node->draw_properties();
+    }
+
+    ImGui::End();
+    ImGui::PopStyleVar();
+}
+
+void application::context_menu() {
+    ed::Suspend();
+
+    if (ed::ShowBackgroundContextMenu()) {
+        ImGui::OpenPopup("AddNode");
+    }
+
+    if (ImGui::BeginPopup("AddNode")) {
+        ImGui::TextUnformatted("Add Node");
+        ImGui::Separator();
+
+        for (const auto& entry : node_registry::instance().entries()) {
+            if (ImGui::MenuItem(entry.type_name.c_str())) {
+                auto* node = m_graph.add_node(entry.type_name);
+                if (node) {
+                    auto pos = ed::ScreenToCanvas(ImGui::GetMousePosOnOpeningCurrentPopup());
+                    ed::SetNodePosition(ed::NodeId(node->id()), pos);
+                }
+            }
+        }
+        ImGui::EndPopup();
+    }
+
+    ed::Resume();
+}
+
+ImVec4 application::wire_color(pin_data_type type) const {
+    switch (type) {
+        case pin_data_type::image: return m_colors[editor::Color_PinImage];
+        case pin_data_type::json:  return m_colors[editor::Color_PinJSON];
+        default:                   return ImVec4(1, 1, 1, 1);
+    }
+}
+
+ImVec4 application::header_color(node_category cat) const {
+    switch (cat) {
+        case node_category::input:   return m_colors[editor::Color_HeaderInput];
+        case node_category::process: return m_colors[editor::Color_HeaderProcess];
+        case node_category::output:  return m_colors[editor::Color_HeaderOutput];
+        default:                     return ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
+    }
 }
 
 void application::toolbar() {
@@ -710,8 +766,7 @@ void application::set_light_theme() {
 
     // Editor custom colors
     m_colors[editor::Color_PinImage]            = ImVec4(0.25f, 0.75f, 0.85f, 1.0f);
-    m_colors[editor::Color_PinColor]            = ImVec4(0.45f, 0.78f, 0.45f, 1.0f);
-    m_colors[editor::Color_PinMask]             = ImVec4(0.65f, 0.40f, 0.85f, 1.0f);
+    m_colors[editor::Color_PinJSON]             = ImVec4(0.45f, 0.78f, 0.45f, 1.0f);
     m_colors[editor::Color_HeaderInput]         = ImVec4(0.30f, 0.60f, 0.30f, 1.0f);
     m_colors[editor::Color_HeaderProcess]       = ImVec4(0.75f, 0.45f, 0.20f, 1.0f);
     m_colors[editor::Color_HeaderOutput]        = ImVec4(0.30f, 0.45f, 0.70f, 1.0f);
@@ -820,8 +875,7 @@ void application::set_dark_theme() {
 
     // Editor custom colors
     m_colors[editor::Color_PinImage]            = ImVec4(0.25f, 0.75f, 0.85f, 1.0f);
-    m_colors[editor::Color_PinColor]            = ImVec4(0.45f, 0.78f, 0.45f, 1.0f);
-    m_colors[editor::Color_PinMask]             = ImVec4(0.65f, 0.40f, 0.85f, 1.0f);
+    m_colors[editor::Color_PinJSON]             = ImVec4(0.45f, 0.78f, 0.45f, 1.0f);
     m_colors[editor::Color_HeaderInput]         = ImVec4(0.30f, 0.60f, 0.30f, 1.0f);
     m_colors[editor::Color_HeaderProcess]       = ImVec4(0.75f, 0.45f, 0.20f, 1.0f);
     m_colors[editor::Color_HeaderOutput]        = ImVec4(0.30f, 0.45f, 0.70f, 1.0f);
